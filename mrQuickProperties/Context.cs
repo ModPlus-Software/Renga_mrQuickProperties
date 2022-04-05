@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.Linq;
 using Models;
 using ModPlusAPI.Mvvm;
@@ -116,6 +117,11 @@ public class Context : ObservableObject
 
     private void ReadCurrentSelection()
     {
+        foreach (var summaryProperty in Properties)
+        {
+            summaryProperty.PropertyChanged -= SummaryPropertyOnPropertyChanged;
+        }
+
         Properties.Clear();
         if (_rengaApplication.ActiveView is not IModelView)
         {
@@ -169,6 +175,7 @@ public class Context : ObservableObject
             foreach (var summaryProperty in properties.OrderBy(p => p.Name))
             {
                 summaryProperty.Calculate();
+                summaryProperty.PropertyChanged += SummaryPropertyOnPropertyChanged;
                 Properties.Add(summaryProperty);
             }
         }
@@ -185,5 +192,20 @@ public class Context : ObservableObject
 
         SelectedElementsCount = ids.Length;
         OnPropertyChanged(nameof(SelectedElementsCount));
+    }
+
+    private void SummaryPropertyOnPropertyChanged(object sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SummaryProperty.DisplayValue) && sender is SummaryProperty changedProperty)
+        {
+            foreach (var summaryProperty in Properties)
+            {
+                if (summaryProperty == changedProperty)
+                    continue;
+                summaryProperty.PropertyChanged -= SummaryPropertyOnPropertyChanged;
+                summaryProperty.Calculate();
+                summaryProperty.PropertyChanged += SummaryPropertyOnPropertyChanged;
+            }
+        }
     }
 }

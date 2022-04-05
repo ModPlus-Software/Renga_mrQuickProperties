@@ -125,8 +125,10 @@ public class SummaryProperty : ObservableObject
             if (_displayValue == value)
                 return;
             _displayValue = value;
-            OnPropertyChanged();
+            
             SetValueToProperties();
+
+            OnPropertyChanged();
         }
     }
 
