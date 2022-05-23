@@ -6,6 +6,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Linq;
 using Models;
+using ModPlus.Helpers;
 using ModPlusAPI.Mvvm;
 using ModPlusAPI.Windows;
 using Renga;
@@ -139,7 +140,9 @@ public class Context : ObservableObject
             var modelObjectCollection = project.Model.GetObjects();
             foreach (var id in ids)
             {
-                var modelObject = modelObjectCollection.GetById(id);
+                var modelObject = modelObjectCollection.TryGetModelObject(id, project);
+                if (modelObject == null)
+                    continue;
 
                 if (SelectedObjectGroup.ObjectType != Guid.Empty)
                 {
