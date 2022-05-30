@@ -33,19 +33,21 @@
 
             <DataTemplate x:Key="ForInteger"
                           DataType="{x:Type models:SummaryProperty}">
-                <mps:NumericBox Value="{Binding Path=IntegerValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=500}"
+                <mps:NumericBox Value="{Binding Path=IntegerValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=500, TargetNullValue=''}"
                                 BorderThickness="0"
                                 Margin="0"
-                                NumericInputMode="Numbers"/>
+                                NumericInputMode="Numbers"
+                                mps:TextFieldAssist.SelectAllOnFocus="True"/>
             </DataTemplate>
 
             <DataTemplate x:Key="ForDouble"
                           DataType="{x:Type models:SummaryProperty}">
-                <mps:NumericBox Value="{Binding Path=DoubleValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=500}"
+                <mps:NumericBox Value="{Binding Path=DoubleValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged, Delay=500, TargetNullValue=''}"
                                 BorderThickness="0"
                                 Margin="0"
                                 HideUpDownButtons="True"
-                                NumericInputMode="Decimal"/>
+                                NumericInputMode="Decimal"
+                                mps:TextFieldAssist.SelectAllOnFocus="True"/>
             </DataTemplate>
 
             <DataTemplate x:Key="ForList"

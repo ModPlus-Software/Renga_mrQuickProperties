@@ -20,8 +20,8 @@ public class SummaryProperty : ObservableObject
     private readonly IProject _project;
     private readonly List<IProperty> _properties;
     private string _displayValue;
-    private int _integerValue;
-    private double _doubleValue;
+    private int? _integerValue;
+    private double? _doubleValue;
     private EnumerationValue _selectedEnumerationValue;
     private readonly IOperation _operation;
 
@@ -135,7 +135,7 @@ public class SummaryProperty : ObservableObject
     /// <summary>
     /// Integer value
     /// </summary>
-    public int IntegerValue
+    public int? IntegerValue
     {
         get => _integerValue;
         set
@@ -151,16 +151,14 @@ public class SummaryProperty : ObservableObject
     /// <summary>
     /// Double value
     /// </summary>
-    public double DoubleValue
+    public double? DoubleValue
     {
         get => _doubleValue;
         set
         {
-            if (Math.Abs(_doubleValue - value) < 0.001)
-                return;
             _doubleValue = value;
             OnPropertyChanged();
-            DisplayValue = value.ToString(DoubleFormat, _numbersCulture);
+            DisplayValue = value.HasValue ? value.Value.ToString(DoubleFormat, _numbersCulture) : string.Empty;
         }
     }
 
@@ -209,12 +207,20 @@ public class SummaryProperty : ObservableObject
         }
         else if (PropertyType == PropertyType.PropertyType_Integer)
         {
-            var values = _properties.Select(p => p.GetIntegerValue()).ToList();
+            var values = new List<int?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetIntegerValue());
+                else
+                    values.Add(null);
+            }
+
             var distinctCount = values.Distinct().Count();
             _displayValue = distinctCount != 1 
                 ? different 
-                : values.First() is 0 && !_properties.First().HasValue() ? string.Empty : values.First().ToString();
-            _integerValue = distinctCount != 1 ? 0 : values.First();
+                : values.First() is null ? string.Empty : values.First().ToString();
+            _integerValue = distinctCount != 1 ? null : values.First();
         }
         else if (IsDoubleValuePropertyType())
         {
@@ -222,8 +228,8 @@ public class SummaryProperty : ObservableObject
             var distinctCount = values.Distinct().Count();
             _displayValue = distinctCount != 1 
                 ? different
-                : values.First() is 0.00 && !_properties.First().HasValue() ? string.Empty : values.First().ToString(DoubleFormat, _numbersCulture);
-            _doubleValue = distinctCount != 1 ? 0 : values.First();
+                : values.First() is null ? string.Empty : values.First().Value.ToString(DoubleFormat, _numbersCulture);
+            _doubleValue = distinctCount != 1 ? null : values.First();
         }
         else if (PropertyType == PropertyType.PropertyType_Boolean)
         {
@@ -293,31 +299,73 @@ public class SummaryProperty : ObservableObject
         }
         else if (PropertyType == PropertyType.PropertyType_Integer)
         {
-            _properties.ForEach(p => p.SetIntegerValue(IntegerValue));
+            foreach (var p in _properties)
+            {
+                if (IntegerValue.HasValue)
+                    p.SetIntegerValue(IntegerValue.Value);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Double)
         {
-            _properties.ForEach(p => p.SetDoubleValue(DoubleValue));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetDoubleValue(DoubleValue.Value);
+                else 
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Mass)
         {
-            _properties.ForEach(p => p.SetMassValue(DoubleValue, MassUnit.MassUnit_Kilograms));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetMassValue(DoubleValue.Value, MassUnit.MassUnit_Kilograms);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Volume)
         {
-            _properties.ForEach(p => p.SetVolumeValue(DoubleValue, VolumeUnit.VolumeUnit_Meters3));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetVolumeValue(DoubleValue.Value, VolumeUnit.VolumeUnit_Meters3);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Area)
         {
-            _properties.ForEach(p => p.SetAreaValue(DoubleValue, AreaUnit.AreaUnit_Meters2));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetAreaValue(DoubleValue.Value, AreaUnit.AreaUnit_Meters2);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Angle)
         {
-            _properties.ForEach(p => p.SetAngleValue(DoubleValue, AngleUnit.AngleUnit_Degrees));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetAngleValue(DoubleValue.Value, AngleUnit.AngleUnit_Degrees);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Length)
         {
-            _properties.ForEach(p => p.SetLengthValue(DoubleValue, LengthUnit.LengthUnit_Meters));
+            foreach (var p in _properties)
+            {
+                if (DoubleValue.HasValue)
+                    p.SetLengthValue(DoubleValue.Value, LengthUnit.LengthUnit_Meters);
+                else
+                    p.ResetValue();
+            }
         }
         else if (PropertyType == PropertyType.PropertyType_Boolean)
         {
@@ -354,17 +402,92 @@ public class SummaryProperty : ObservableObject
             PropertyType.PropertyType_Logical;
     }
 
-    private List<double> GetDoubleValues()
+    private List<double?> GetDoubleValues()
     {
-        return PropertyType switch
+        if (PropertyType == PropertyType.PropertyType_Double)
         {
-            PropertyType.PropertyType_Double => _properties.Select(p => p.GetDoubleValue()).ToList(),
-            PropertyType.PropertyType_Angle => _properties.Select(p => p.GetAngleValue(AngleUnit.AngleUnit_Degrees)).ToList(),
-            PropertyType.PropertyType_Area => _properties.Select(p => p.GetAreaValue(AreaUnit.AreaUnit_Meters2)).ToList(),
-            PropertyType.PropertyType_Length => _properties.Select(p => p.GetLengthValue(LengthUnit.LengthUnit_Meters)).ToList(),
-            PropertyType.PropertyType_Mass => _properties.Select(p => p.GetMassValue(MassUnit.MassUnit_Kilograms)).ToList(),
-            PropertyType.PropertyType_Volume => _properties.Select(p => p.GetVolumeValue(VolumeUnit.VolumeUnit_Meters3)).ToList(),
-            _ => throw new ArgumentOutOfRangeException()
-        };
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetDoubleValue());
+                else 
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        if (PropertyType == PropertyType.PropertyType_Angle)
+        {
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetAngleValue(AngleUnit.AngleUnit_Degrees));
+                else
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        if (PropertyType == PropertyType.PropertyType_Area)
+        {
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetAreaValue(AreaUnit.AreaUnit_Meters2));
+                else
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        if (PropertyType == PropertyType.PropertyType_Length)
+        {
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetLengthValue(LengthUnit.LengthUnit_Meters));
+                else
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        if (PropertyType == PropertyType.PropertyType_Mass)
+        {
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetMassValue(MassUnit.MassUnit_Kilograms));
+                else
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        if (PropertyType == PropertyType.PropertyType_Volume)
+        {
+            var values = new List<double?>();
+            foreach (var property in _properties)
+            {
+                if (property.HasValue())
+                    values.Add(property.GetVolumeValue(VolumeUnit.VolumeUnit_Meters3));
+                else
+                    values.Add(null);
+            }
+
+            return values;
+        }
+
+        throw new ArgumentOutOfRangeException();
     }
 }
